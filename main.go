@@ -4,23 +4,27 @@ import (
 	"flag"
 
 	log "github.com/Sirupsen/logrus"
-
-	"github.com/sebgl/reddify/reddit"
 )
 
 var (
 	redditUser     = flag.String("reddit-user", "", "Reddit username")
 	redditPassword = flag.String("reddit-password", "", "Reddit username")
+	subreddit      = flag.String("subreddit", "", "Subreddit to look for playlists")
 )
 
 func main() {
 	flag.Parse()
 
-	subreddit := "spotify"
-	scraper, err := reddit.NewPlaylistScraper(*redditUser, *redditPassword, subreddit)
+	scraper, err := NewPlaylistScraper(*redditUser, *redditPassword, *subreddit)
 	if err != nil {
 		log.Fatal(err)
 	}
-	scraper.ScrapLast(1000)
-	log.WithField("count", len(scraper.Playlists)).Info("Successfully scraped playlists")
+	playlists := scraper.ScrapLast(10)
+	log.WithField("count", len(playlists)).Info("Successfully scraped playlists")
+
+	spotifyClient := getClient()
+	err = getSpotifyPlaylist(spotifyClient, playlists[0].SpotifyURL)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
