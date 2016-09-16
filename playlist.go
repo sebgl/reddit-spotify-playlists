@@ -1,11 +1,12 @@
 package main
 
+import "github.com/zmb3/spotify"
+
 type Playlist struct {
 	RedditUser        string
 	RedditScore       int
 	RedditTitle       string
 	RedditDescription string
 	SpotifyURL        string
-	SpotifyUserID     string
-	SpotifyPlaylistID string
+	SpotifyPlaylist   *spotify.FullPlaylist
 }

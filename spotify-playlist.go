@@ -4,23 +4,21 @@ import (
 	"fmt"
 	"regexp"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/zmb3/spotify"
 )
 
 var spotifyURLIDsRegex = regexp.MustCompile(`^https:\/\/open\.spotify\.com\/user\/(.*)\/playlist\/(.*)$`)
 
-func getSpotifyPlaylist(c *spotify.Client, url string) error {
+func getSpotifyPlaylist(c *spotify.Client, url string) (*spotify.FullPlaylist, error) {
 	userID, playlistID, err := IDsFromURL(url)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	playlist, err := c.GetPlaylist(userID, spotify.ID(playlistID))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	log.Infof("Got playlist %+v", playlist)
-	return nil
+	return playlist, nil
 }
 
 func IDsFromURL(url string) (userID, playlistID string, err error) {

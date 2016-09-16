@@ -28,7 +28,7 @@ var (
 	state = "abc123"
 )
 
-func getClient() *spotify.Client {
+func getSpotifyClient() *spotify.Client {
 	// first start an HTTP server
 	http.HandleFunc("/callback", completeAuth)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
