@@ -10,7 +10,7 @@ import (
 var spotifyURLRegex = regexp.MustCompile(`^https:\/\/open\.spotify\.com\/user\/.*\/playlist\/.*$`)
 
 type PlaylistScraper struct {
-	Playlists     []Playlist
+	Scraped       []*RedditData
 	RedditSession *geddit.LoginSession
 	Subreddit     string
 }
@@ -21,13 +21,13 @@ func NewPlaylistScraper(redditLogin string, redditPassword string, subreddit str
 		return nil, err
 	}
 	return &PlaylistScraper{
-		Playlists:     make([]Playlist, 0, 10000),
+		Scraped:       make([]*RedditData, 0, 10000),
 		RedditSession: session,
 		Subreddit:     subreddit,
 	}, nil
 }
 
-func (ps *PlaylistScraper) ScrapLast(n int) []Playlist {
+func (ps *PlaylistScraper) ScrapLast(n int) []*RedditData {
 	batchSize := 100
 	params := geddit.ListingOptions{
 		Limit: batchSize,
@@ -40,12 +40,12 @@ func (ps *PlaylistScraper) ScrapLast(n int) []Playlist {
 		}
 		lastSubmission := ps.parseSubmissions(submissions)
 		if lastSubmission == nil {
-			return ps.Playlists // no more submissions to parse
+			return ps.Scraped // no more submissions to parse
 		}
 		log.WithField("count", len(submissions)).WithField("last", lastSubmission).Info("Got submissions")
 		params.After = lastSubmission.FullID
 	}
-	return ps.Playlists
+	return ps.Scraped
 }
 
 func (ps *PlaylistScraper) parseSubmissions(submissions []*geddit.Submission) (lastSub *geddit.Submission) {
@@ -55,13 +55,14 @@ func (ps *PlaylistScraper) parseSubmissions(submissions []*geddit.Submission) (l
 	for _, s := range submissions {
 		isSpotifyPlaylist := spotifyURLRegex.MatchString(s.URL)
 		if isSpotifyPlaylist {
-			ps.Playlists = append(ps.Playlists, Playlist{
-				SpotifyURL:        s.URL,
-				RedditUser:        s.Author,
-				RedditScore:       s.Score,
-				RedditTitle:       s.Title,
-				RedditDescription: s.Selftext,
-			})
+			redditData := RedditData{
+				SpotifyURL:  s.URL,
+				User:        s.Author,
+				Score:       s.Score,
+				Title:       s.Title,
+				Description: s.Selftext,
+			}
+			ps.Scraped = append(ps.Scraped, &redditData)
 		}
 	}
 	lastSub = submissions[len(submissions)-1]

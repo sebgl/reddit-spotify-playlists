@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"os"
 
@@ -12,46 +11,50 @@ var (
 	redditUser     = flag.String("reddit-user", "", "Reddit username")
 	redditPassword = flag.String("reddit-password", "", "Reddit username")
 	subreddit      = flag.String("subreddit", "", "Subreddit to look for playlists")
+	nSubmissions   = flag.Int("last", 10, "Number of submissions to parse (rounded up to Reddit page size)")
+	esURL          = flag.String("elasticsearch", "http://localhost:9200", "Elasticsearch URL")
 )
 
 func main() {
 	flag.Parse()
 
+	checkEnvVars("SPOTIFY_ID", "SPOTIFY_SECRET")
+
+	// scrap playlist submissions from reddit
 	scraper, err := NewPlaylistScraper(*redditUser, *redditPassword, *subreddit)
 	if err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal("Unable to scrap playlists from reddit")
 	}
-	playlists := scraper.ScrapLast(2)
-	log.WithField("count", len(playlists)).Info("Successfully scraped playlists")
+	dataFromReddit := scraper.ScrapLast(*nSubmissions)
+	log.WithField("count", len(dataFromReddit)).Info("Successfully scraped reddit submissions")
 
+	// get playlists data from spotify
+	playlists := make([]Playlist, 0, len(dataFromReddit))
 	spotifyClient := getSpotifyClient()
-	for i, p := range playlists {
-		sp, err := getSpotifyPlaylist(spotifyClient, p.SpotifyURL)
+	for _, p := range dataFromReddit {
+		sp, err := getSpotifyData(spotifyClient, p.SpotifyURL)
 		if err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal("Unable to retrieve playlist data from spotify")
 		}
-		playlists[i].SpotifyPlaylist = sp
+		playlists = append(playlists, Playlist{
+			RedditData:  p,
+			SpotifyData: sp,
+		})
 	}
-	err = ToElasticSearch(playlists)
+
+	// write playlists data into elasticsearch
+	esWriter := NewElasticsearchWriter(*esURL)
+	err = esWriter.Write(playlists)
 	if err != nil {
 		log.WithError(err).Fatal("Unable to send data to elasticsearch")
 	}
+	log.Info("Data written to elasticsearch")
 }
 
-func writeToFile(playlists []Playlist) error {
-	b, err := json.Marshal(playlists)
-	if err != nil {
-		log.WithError(err).Fatal("Unable to marshal playlist as json")
-		return err
+func checkEnvVars(vars ...string) {
+	for _, v := range vars {
+		if os.Getenv(v) == "" {
+			log.Fatalf("$%s must be defined", v)
+		}
 	}
-	fo, err := os.Create("output.json")
-	if err != nil {
-		return err
-	}
-	defer fo.Close()
-	_, err = fo.Write(b)
-	if err != nil {
-		return err
-	}
-	return nil
 }

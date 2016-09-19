@@ -11,19 +11,27 @@ import (
 const index = "spotify"
 const documentType = "playlist"
 
-// TODO: variabilize
-const elasticsearchHost = "http://localhost:9200"
-const elasticsearchURL = elasticsearchHost + "/" + index + "/" + documentType
+type ElasticsearchWriter struct {
+	Host string
+	URL  string
+}
 
-func ToElasticSearch(playlists []Playlist) error {
+func NewElasticsearchWriter(host string) *ElasticsearchWriter {
+	return &ElasticsearchWriter{
+		Host: host,
+		URL:  host + "/" + index + "/" + documentType,
+	}
+}
+
+func (ew *ElasticsearchWriter) Write(playlists []Playlist) error {
 	for _, p := range playlists {
-		pID := p.SpotifyPlaylist.ID.String()
+		pID := p.SpotifyData.ID
+
 		data, err := json.Marshal(p)
 		if err != nil {
 			return err
 		}
-
-		req, err := http.NewRequest("PUT", elasticsearchURL+"/"+pID, bytes.NewBuffer(data))
+		req, err := http.NewRequest("PUT", ew.URL+"/"+pID, bytes.NewBuffer(data))
 		if err != nil {
 			return err
 		}
@@ -34,7 +42,7 @@ func ToElasticSearch(playlists []Playlist) error {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != 201 {
+		if resp.StatusCode != 201 && resp.StatusCode != 200 {
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				return err
