@@ -48,9 +48,25 @@ func (sp SpotifyScraper) extractImagesURL(playlist *spotify.FullPlaylist) []stri
 }
 
 func (sp SpotifyScraper) extractTracks(playlist *spotify.FullPlaylist) []Track {
-	tracks := make([]Track, playlist.Tracks.Total)
-	// TODO: get next page tracks
-	// sadly, not available in zmb3/spotify
+	// retrieve next pages of tracks
+	// TODO: this would be better implemented in the spotify library
+	MaxNumberOfTracksToRetrieve := 5000 // set an upper-limit for XXXL playlists
+	currentOffset := playlist.Tracks.Limit
+	for currentOffset < playlist.Tracks.Total && currentOffset < MaxNumberOfTracksToRetrieve {
+		nextTracks, err := sp.c.GetPlaylistTracksOpt(playlist.Owner.ID, playlist.ID,
+			&spotify.Options{Offset: &currentOffset}, "")
+		if err != nil {
+			log.WithError(err).Errorf("Fail to retrieve tracks from offset %d", playlist.Tracks.Limit)
+		}
+		newOffset := currentOffset + len(nextTracks.Tracks)
+		log.WithField("currentOffset", currentOffset).WithField("newOffset", newOffset).WithField("total", playlist.Tracks.Total).
+			Info("Retrieved additional tracks")
+		playlist.Tracks.Tracks = append(playlist.Tracks.Tracks, nextTracks.Tracks...)
+		currentOffset = newOffset
+	}
+
+	// extract relevant tracks data
+	tracks := make([]Track, len(playlist.Tracks.Tracks))
 	for i, t := range playlist.Tracks.Tracks {
 		tracks[i] = Track{
 			Album: Album{
