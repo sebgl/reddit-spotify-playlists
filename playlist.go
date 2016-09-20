@@ -12,10 +12,18 @@ type Playlist struct {
 
 type RedditData struct {
 	User        string
-	Score       int
+	UpVotes     int
 	Title       string
 	Description string
 	SpotifyURL  string
+	Date        int
+	Comments    []Comment
+}
+
+type Comment struct {
+	Author  string
+	UpVotes int
+	Text    string
 }
 
 type SpotifyData struct {

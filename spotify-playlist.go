@@ -10,18 +10,22 @@ import (
 
 var spotifyURLIDsRegex = regexp.MustCompile(`^https:\/\/open\.spotify\.com\/user\/(.*)\/playlist\/(.*)$`)
 
-func getSpotifyData(c *spotify.Client, url string) (*SpotifyData, error) {
+type SpotifyScraper struct {
+	c *spotify.Client
+}
+
+func (sp SpotifyScraper) GetSpotifyData(url string) (*SpotifyData, error) {
 	userID, playlistID, err := IDsFromURL(url)
 	if err != nil {
 		return nil, err
 	}
 	log.WithField("ID", playlistID).Info("Getting Spotify playlist data")
-	playlist, err := c.GetPlaylist(userID, spotify.ID(playlistID))
+	playlist, err := sp.c.GetPlaylist(userID, spotify.ID(playlistID))
 	if err != nil {
 		return nil, err
 	}
-	imagesURL := extractImagesURL(playlist)
-	tracks := extractTracks(playlist)
+	imagesURL := sp.extractImagesURL(playlist)
+	tracks := sp.extractTracks(playlist)
 	spotifyData := SpotifyData{
 		Description: playlist.Description,
 		Followers:   int(playlist.Followers.Count),
@@ -35,7 +39,7 @@ func getSpotifyData(c *spotify.Client, url string) (*SpotifyData, error) {
 	return &spotifyData, nil
 }
 
-func extractImagesURL(playlist *spotify.FullPlaylist) []string {
+func (sp SpotifyScraper) extractImagesURL(playlist *spotify.FullPlaylist) []string {
 	imagesURL := make([]string, len(playlist.Images))
 	for i, img := range playlist.Images {
 		imagesURL[i] = img.URL
@@ -43,8 +47,10 @@ func extractImagesURL(playlist *spotify.FullPlaylist) []string {
 	return imagesURL
 }
 
-func extractTracks(playlist *spotify.FullPlaylist) []Track {
+func (sp SpotifyScraper) extractTracks(playlist *spotify.FullPlaylist) []Track {
 	tracks := make([]Track, playlist.Tracks.Total)
+	// TODO: get next page tracks
+	// sadly, not available in zmb3/spotify
 	for i, t := range playlist.Tracks.Tracks {
 		tracks[i] = Track{
 			Album: Album{
