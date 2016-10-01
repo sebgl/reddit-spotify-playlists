@@ -2,7 +2,7 @@ build:
 	go build
 
 dev: build
-	./reddit-spotify-playlists \
+	./redspot-finder-scraper \
 		--reddit-user=accountfortests --reddit-password=passwordfortests \
 		--subreddit=spotify
 
