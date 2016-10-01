@@ -8,8 +8,8 @@ import (
 	"net/http"
 )
 
-const index = "spotify"
-const documentType = "playlist"
+const Index = "spotify"
+const DocumentType = "playlist"
 
 type ElasticsearchWriter struct {
 	Host string
@@ -19,7 +19,7 @@ type ElasticsearchWriter struct {
 func NewElasticsearchWriter(host string) *ElasticsearchWriter {
 	return &ElasticsearchWriter{
 		Host: host,
-		URL:  host + "/" + index + "/" + documentType,
+		URL:  host + "/" + Index + "/" + DocumentType,
 	}
 }
 
