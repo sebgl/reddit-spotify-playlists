@@ -1,4 +1,4 @@
-package main
+package scraper
 
 import (
 	"fmt"
@@ -12,6 +12,10 @@ var spotifyURLIDsRegex = regexp.MustCompile(`^https:\/\/open\.spotify\.com\/user
 
 type SpotifyScraper struct {
 	c *spotify.Client
+}
+
+func NewSpotifyScraper() *SpotifyScraper {
+	return &SpotifyScraper{c: getSpotifyClient()}
 }
 
 func (sp SpotifyScraper) GetSpotifyData(url string) (*SpotifyData, error) {

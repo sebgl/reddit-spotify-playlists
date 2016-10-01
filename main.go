@@ -5,6 +5,7 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/sebgl/redspot-finder-scraper/scraper"
 )
 
 var (
@@ -21,7 +22,7 @@ func main() {
 	checkEnvVars("SPOTIFY_ID", "SPOTIFY_SECRET")
 
 	// scrap playlist submissions from reddit
-	redditScraper, err := NewRedditScraper(*redditUser, *redditPassword, *subreddit)
+	redditScraper, err := scraper.NewRedditScraper(*redditUser, *redditPassword, *subreddit)
 	if err != nil {
 		log.WithError(err).Fatal("Unable to scrap playlists from reddit")
 	}
@@ -29,22 +30,22 @@ func main() {
 	log.WithField("count", len(dataFromReddit)).Info("Successfully scraped reddit submissions")
 
 	// get playlists data from spotify
-	playlists := make([]Playlist, 0, len(dataFromReddit))
-	spotifyScraper := SpotifyScraper{c: getSpotifyClient()}
+	playlists := make([]scraper.Playlist, 0, len(dataFromReddit))
+	spotifyScraper := scraper.NewSpotifyScraper()
 	for _, p := range dataFromReddit {
 		sp, err := spotifyScraper.GetSpotifyData(p.SpotifyURL)
 		if err != nil {
 			log.WithError(err).Error("Unable to retrieve playlist data from spotify")
 			continue
 		}
-		playlists = append(playlists, Playlist{
+		playlists = append(playlists, scraper.Playlist{
 			RedditData:  p,
 			SpotifyData: sp,
 		})
 	}
 
 	// write playlists data into elasticsearch
-	esWriter := NewElasticsearchWriter(*esURL)
+	esWriter := scraper.NewElasticsearchWriter(*esURL)
 	err = esWriter.Write(playlists)
 	if err != nil {
 		log.WithError(err).Fatal("Unable to send data to elasticsearch")
